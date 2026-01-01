@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka+One&display=swap');
 
 * {
   margin: 0;
@@ -7,17 +7,18 @@
 }
 
 :root {
-  --bg-dark: #0a0a1a;
-  --bg-gradient: linear-gradient(180deg, #0a0a1a 0%, #1a1a3a 50%, #2a1a4a 100%);
-  --neon-pink: #ff00ff;
-  --neon-cyan: #00ffff;
-  --neon-yellow: #ffff00;
-  --text-glow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor;
+  --bg-dark: #1a0a00;
+  --grill-color: #2a2a2a;
+  --flame-orange: #ff6b35;
+  --flame-yellow: #ffc107;
+  --ketchup-red: #dc3545;
+  --mustard-yellow: #ffc107;
+  --bun-tan: #d4a574;
 }
 
 body {
-  font-family: 'Orbitron', sans-serif;
-  background: var(--bg-gradient);
+  font-family: 'Fredoka One', cursive;
+  background: linear-gradient(180deg, #1a0a00 0%, #2d1810 50%, #1a0a00 100%);
   min-height: 100vh;
   overflow: hidden;
   user-select: none;
@@ -36,6 +37,7 @@ body {
   position: relative;
 }
 
+/* Flame effect background */
 .game-container::before {
   content: '';
   position: fixed;
@@ -44,15 +46,15 @@ body {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 20% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%);
+    radial-gradient(ellipse at 30% 100%, rgba(255, 107, 53, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 100%, rgba(255, 193, 7, 0.15) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
 
 .game-header {
   display: flex;
-  gap: 40px;
+  gap: 30px;
   margin-bottom: 15px;
   z-index: 10;
 }
@@ -62,51 +64,48 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 25px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid var(--neon-cyan);
-  border-radius: 10px;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1);
+  padding: 12px 20px;
+  background: linear-gradient(180deg, #3d2817 0%, #2a1a0f 100%);
+  border: 3px solid var(--bun-tan);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 
 .high-score-display {
-  border-color: var(--neon-pink);
-  box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 15px rgba(255, 0, 255, 0.1);
+  border-color: var(--flame-orange);
 }
 
 .score-label {
+  font-family: 'Fredoka One', cursive;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--bun-tan);
   letter-spacing: 2px;
   margin-bottom: 5px;
 }
 
 .score-value {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 24px;
-  color: white;
-  text-shadow: var(--text-glow);
+  font-family: 'Bangers', cursive;
+  font-size: 28px;
+  color: var(--flame-yellow);
+  text-shadow: 2px 2px 0 #000, 0 0 10px rgba(255, 193, 7, 0.5);
 }
 
 .game-area {
   width: 300px;
   height: 500px;
-  background: linear-gradient(180deg, 
-    rgba(10, 10, 30, 0.9) 0%, 
-    rgba(20, 20, 50, 0.9) 100%
-  );
-  border: 3px solid var(--neon-cyan);
-  border-radius: 15px;
+  background: var(--grill-color);
+  border: 4px solid #444;
+  border-radius: 12px;
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 0 30px rgba(0, 255, 255, 0.4),
-    inset 0 0 50px rgba(0, 255, 255, 0.1);
+    0 0 30px rgba(255, 107, 53, 0.3),
+    inset 0 0 50px rgba(0, 0, 0, 0.5);
   z-index: 10;
 }
 
-.game-area::before {
-  content: '';
+/* Grill grate pattern */
+.grill-bg {
   position: absolute;
   top: 0;
   left: 0;
@@ -114,14 +113,15 @@ body {
   bottom: 0;
   background: 
     repeating-linear-gradient(
-      0deg,
+      90deg,
       transparent,
-      transparent 49px,
-      rgba(0, 255, 255, 0.03) 49px,
-      rgba(0, 255, 255, 0.03) 50px
+      transparent 18px,
+      #333 18px,
+      #333 22px
     );
+  opacity: 0.5;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 .game-world {
@@ -129,72 +129,73 @@ body {
   height: 100%;
   position: relative;
   transition: transform 0.3s ease-out;
+  z-index: 1;
 }
 
-/* Block styling - 3D effect without overlapping shadows */
-.block {
+/* Patty styling */
+.patty {
   position: absolute;
-  border-radius: 3px;
-  overflow: visible;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.block-top {
+.patty-top {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 6px;
-  border-radius: 3px 3px 0 0;
+  height: 14px;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
 }
 
-.block-front {
+.grill-marks {
   position: absolute;
-  top: 6px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: 0 0 3px 3px;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 0 10%;
 }
 
-.block-side {
+.grill-mark {
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  transform: skewX(-15deg);
+}
+
+.patty-side {
   position: absolute;
-  bottom: -4px;
-  left: 4px;
-  right: -4px;
-  height: 4px;
-  border-radius: 0 0 3px 3px;
-  z-index: -1;
+  top: 14px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0 0 6px 6px;
 }
 
-.placed-block {
-  animation: blockPlace 0.1s ease-out;
+.patty-moving {
+  animation: sizzle 0.15s ease-in-out infinite alternate;
 }
 
-@keyframes blockPlace {
-  0% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.current-block {
-  animation: blockGlow 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes blockGlow {
+@keyframes sizzle {
   0% {
     filter: brightness(1);
   }
   100% {
-    filter: brightness(1.2);
+    filter: brightness(1.15);
   }
 }
 
-.falling-block {
+.falling-patty {
   transition: none;
-  border-radius: 3px;
 }
 
 .perfect-text {
@@ -202,13 +203,12 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: 'Press Start 2P', cursive;
-  font-size: 28px;
-  color: var(--neon-yellow);
+  font-family: 'Bangers', cursive;
+  font-size: 32px;
+  color: var(--flame-yellow);
   text-shadow: 
-    0 0 10px var(--neon-yellow),
-    0 0 20px var(--neon-yellow),
-    0 0 40px var(--neon-yellow);
+    3px 3px 0 var(--ketchup-red),
+    0 0 20px rgba(255, 193, 7, 0.8);
   animation: perfectPop 0.5s ease-out forwards;
   z-index: 100;
   text-align: center;
@@ -216,12 +216,10 @@ body {
 
 .streak {
   display: block;
-  font-size: 18px;
-  margin-top: 10px;
-  color: var(--neon-pink);
-  text-shadow: 
-    0 0 10px var(--neon-pink),
-    0 0 20px var(--neon-pink);
+  font-size: 24px;
+  margin-top: 5px;
+  color: var(--flame-orange);
+  text-shadow: 2px 2px 0 #000;
 }
 
 @keyframes perfectPop {
@@ -249,125 +247,125 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(20, 10, 0, 0.92);
   z-index: 50;
   animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.logo-burger {
+  font-size: 60px;
+  margin-bottom: 10px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .game-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 32px;
-  color: white;
+  font-family: 'Bangers', cursive;
+  font-size: 42px;
+  color: var(--flame-yellow);
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.1;
   text-shadow: 
-    0 0 10px var(--neon-cyan),
-    0 0 20px var(--neon-cyan),
-    0 0 40px var(--neon-cyan);
-  animation: titlePulse 2s ease-in-out infinite;
-  margin-bottom: 30px;
+    4px 4px 0 var(--ketchup-red),
+    6px 6px 0 #000;
+  margin-bottom: 5px;
+  letter-spacing: 3px;
 }
 
-@keyframes titlePulse {
-  0%, 100% {
-    text-shadow: 
-      0 0 10px var(--neon-cyan),
-      0 0 20px var(--neon-cyan),
-      0 0 40px var(--neon-cyan);
-  }
-  50% {
-    text-shadow: 
-      0 0 15px var(--neon-pink),
-      0 0 30px var(--neon-pink),
-      0 0 60px var(--neon-pink);
-  }
+.subtitle {
+  font-family: 'Fredoka One', cursive;
+  font-size: 14px;
+  color: var(--bun-tan);
+  letter-spacing: 2px;
+  margin-bottom: 25px;
 }
 
 .tap-text {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 14px;
+  font-family: 'Bangers', cursive;
+  font-size: 18px;
   color: white;
   letter-spacing: 3px;
   animation: blink 1s ease-in-out infinite;
   margin-top: 20px;
+  text-shadow: 2px 2px 0 #000;
 }
 
 @keyframes blink {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .instructions {
-  margin-top: 30px;
+  margin-top: 25px;
   text-align: center;
 }
 
 .instructions p {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 8px 0;
+  font-family: 'Fredoka One', cursive;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 6px 0;
   letter-spacing: 1px;
 }
 
 .gameover-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 24px;
-  color: #ff4444;
+  font-family: 'Bangers', cursive;
+  font-size: 36px;
+  color: var(--flame-orange);
   text-shadow: 
-    0 0 10px #ff4444,
-    0 0 20px #ff4444;
-  margin-bottom: 30px;
+    3px 3px 0 #000,
+    0 0 20px rgba(255, 107, 53, 0.5);
+  margin-bottom: 25px;
+  letter-spacing: 2px;
 }
 
 .final-score {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .final-score span:first-child {
+  font-family: 'Fredoka One', cursive;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--bun-tan);
   letter-spacing: 2px;
 }
 
 .final-score-value {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 36px;
-  color: var(--neon-cyan);
-  text-shadow: var(--text-glow);
+  font-family: 'Bangers', cursive;
+  font-size: 48px;
+  color: var(--flame-yellow);
+  text-shadow: 
+    3px 3px 0 var(--ketchup-red),
+    5px 5px 0 #000;
 }
 
 .new-record {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 14px;
-  color: var(--neon-yellow);
-  margin-top: 20px;
+  font-family: 'Bangers', cursive;
+  font-size: 20px;
+  color: var(--flame-yellow);
+  margin-top: 15px;
   animation: recordPulse 0.5s ease-in-out infinite alternate;
+  text-shadow: 2px 2px 0 #000;
 }
 
 @keyframes recordPulse {
   from {
     transform: scale(1);
-    text-shadow: 0 0 10px var(--neon-yellow);
   }
   to {
     transform: scale(1.1);
-    text-shadow: 0 0 20px var(--neon-yellow), 0 0 40px var(--neon-yellow);
   }
 }
 
@@ -377,6 +375,7 @@ body {
 }
 
 .game-footer p {
+  font-family: 'Fredoka One', cursive;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
   letter-spacing: 1px;
@@ -395,23 +394,26 @@ body {
   }
   
   .game-header {
-    gap: 20px;
+    gap: 15px;
   }
   
   .score-display,
   .high-score-display {
-    padding: 8px 15px;
+    padding: 8px 12px;
   }
   
   .score-value {
-    font-size: 18px;
+    font-size: 22px;
+  }
+  
+  .game-title {
+    font-size: 36px;
   }
 }
 
-/* Touch feedback */
+/* Touch feedback - sizzle effect */
 .game-container:active .game-area {
   box-shadow: 
-    0 0 40px rgba(255, 0, 255, 0.5),
-    inset 0 0 50px rgba(255, 0, 255, 0.2);
-  border-color: var(--neon-pink);
+    0 0 50px rgba(255, 107, 53, 0.6),
+    inset 0 0 30px rgba(255, 107, 53, 0.2);
 }
