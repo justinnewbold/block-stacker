@@ -4,7 +4,7 @@ import './App.css';
 const GAME_WIDTH = 300;
 const GAME_HEIGHT = 500;
 const INITIAL_BLOCK_WIDTH = 100;
-const BLOCK_HEIGHT = 25;
+const BLOCK_HEIGHT = 20;
 const SPEED_INCREMENT = 0.3;
 const INITIAL_SPEED = 3;
 
@@ -15,7 +15,7 @@ function App() {
   const [fallingPieces, setFallingPieces] = useState([]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('blockStackerHighScore');
+    const saved = localStorage.getItem('pattyStackerHighScore');
     return saved ? parseInt(saved) : 0;
   });
   const [perfectStreak, setPerfectStreak] = useState(0);
@@ -31,7 +31,7 @@ function App() {
       x: (GAME_WIDTH - INITIAL_BLOCK_WIDTH) / 2,
       y: GAME_HEIGHT - BLOCK_HEIGHT,
       width: INITIAL_BLOCK_WIDTH,
-      color: getBlockColor(0)
+      color: getPattyColor(0)
     };
     
     setBlocks([baseBlock]);
@@ -39,7 +39,7 @@ function App() {
       x: 0,
       y: GAME_HEIGHT - BLOCK_HEIGHT * 2,
       width: INITIAL_BLOCK_WIDTH,
-      color: getBlockColor(1)
+      color: getPattyColor(1)
     });
     setFallingPieces([]);
     setScore(0);
@@ -50,12 +50,19 @@ function App() {
     setGameState('playing');
   }, []);
 
-  function getBlockColor(index) {
+  // Patty colors - various cooked beef tones
+  function getPattyColor(index) {
     const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-      '#F8B500', '#FF6F61', '#6B5B95', '#88B04B', '#F7CAC9',
-      '#92A8D1', '#955251', '#B565A7', '#009B77', '#DD4124'
+      '#8B4513', // Saddle brown
+      '#6B3E26', // Dark brown
+      '#7B3F00', // Chocolate
+      '#5C4033', // Dark liver
+      '#804000', // Brown
+      '#654321', // Dark brown
+      '#8B5A2B', // Tan
+      '#6F4E37', // Coffee
+      '#7B5544', // Medium brown
+      '#5D3A1A', // Seal brown
     ];
     return colors[index % colors.length];
   }
@@ -138,7 +145,7 @@ function App() {
       
       if (score > highScore) {
         setHighScore(score);
-        localStorage.setItem('blockStackerHighScore', score.toString());
+        localStorage.setItem('pattyStackerHighScore', score.toString());
       }
       
       setGameState('gameOver');
@@ -194,13 +201,13 @@ function App() {
     const newBlocks = [...blocks, newBlock];
     setBlocks(newBlocks);
     
-    const newCameraOffset = Math.max(0, (newBlocks.length - 15) * BLOCK_HEIGHT);
+    const newCameraOffset = Math.max(0, (newBlocks.length - 18) * BLOCK_HEIGHT);
     setCameraOffset(newCameraOffset);
     
     if (newBlockWidth < 10) {
       if (score > highScore) {
         setHighScore(score);
-        localStorage.setItem('blockStackerHighScore', score.toString());
+        localStorage.setItem('pattyStackerHighScore', score.toString());
       }
       setGameState('gameOver');
       return;
@@ -213,7 +220,7 @@ function App() {
       x: directionRef.current === 1 ? 0 : GAME_WIDTH - newBlockWidth,
       y: nextY,
       width: newBlockWidth,
-      color: getBlockColor(newBlocks.length)
+      color: getPattyColor(newBlocks.length)
     });
     
   }, [gameState, currentBlock, blocks, score, highScore, perfectStreak, startGame]);
@@ -230,11 +237,36 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTap]);
 
+  // Patty component with burger patty appearance
+  const Patty = ({ block, zIndex, isMoving }) => (
+    <div
+      className={`patty ${isMoving ? 'patty-moving' : ''}`}
+      style={{
+        left: block.x,
+        bottom: GAME_HEIGHT - block.y - BLOCK_HEIGHT,
+        width: block.width,
+        height: BLOCK_HEIGHT,
+        zIndex: zIndex
+      }}
+    >
+      {/* Patty top - slightly lighter with grill marks */}
+      <div className="patty-top" style={{ backgroundColor: adjustColor(block.color, 15) }}>
+        <div className="grill-marks">
+          <div className="grill-mark"></div>
+          <div className="grill-mark"></div>
+          <div className="grill-mark"></div>
+        </div>
+      </div>
+      {/* Patty side - darker edge */}
+      <div className="patty-side" style={{ backgroundColor: adjustColor(block.color, -20) }}></div>
+    </div>
+  );
+
   return (
     <div className="game-container" onClick={handleTap}>
       <div className="game-header">
         <div className="score-display">
-          <span className="score-label">SCORE</span>
+          <span className="score-label">PATTIES</span>
           <span className="score-value">{score}</span>
         </div>
         <div className="high-score-display">
@@ -244,54 +276,28 @@ function App() {
       </div>
       
       <div className="game-area">
+        {/* Grill background */}
+        <div className="grill-bg"></div>
+        
         <div 
           className="game-world"
           style={{ transform: `translateY(${cameraOffset}px)` }}
         >
-          {/* Placed blocks - rendered with z-index based on position (higher blocks on top) */}
+          {/* Stacked patties */}
           {blocks.map((block, index) => (
-            <div
-              key={index}
-              className="block placed-block"
-              style={{
-                left: block.x,
-                bottom: GAME_HEIGHT - block.y - BLOCK_HEIGHT,
-                width: block.width,
-                height: BLOCK_HEIGHT,
-                backgroundColor: block.color,
-                zIndex: index + 1
-              }}
-            >
-              <div className="block-top" style={{ backgroundColor: adjustColor(block.color, 20) }} />
-              <div className="block-front" style={{ backgroundColor: block.color }} />
-              <div className="block-side" style={{ backgroundColor: adjustColor(block.color, -30) }} />
-            </div>
+            <Patty key={index} block={block} zIndex={index + 1} isMoving={false} />
           ))}
           
-          {/* Current moving block */}
+          {/* Current moving patty */}
           {currentBlock && gameState === 'playing' && (
-            <div
-              className="block current-block"
-              style={{
-                left: currentBlock.x,
-                bottom: GAME_HEIGHT - currentBlock.y - BLOCK_HEIGHT,
-                width: currentBlock.width,
-                height: BLOCK_HEIGHT,
-                backgroundColor: currentBlock.color,
-                zIndex: blocks.length + 2
-              }}
-            >
-              <div className="block-top" style={{ backgroundColor: adjustColor(currentBlock.color, 20) }} />
-              <div className="block-front" style={{ backgroundColor: currentBlock.color }} />
-              <div className="block-side" style={{ backgroundColor: adjustColor(currentBlock.color, -30) }} />
-            </div>
+            <Patty block={currentBlock} zIndex={blocks.length + 2} isMoving={true} />
           )}
           
-          {/* Falling pieces */}
+          {/* Falling patty pieces */}
           {fallingPieces.map((piece, index) => (
             <div
               key={`fall-${index}`}
-              className="block falling-block"
+              className="patty falling-patty"
               style={{
                 left: piece.x,
                 bottom: GAME_HEIGHT - piece.y - BLOCK_HEIGHT,
@@ -300,7 +306,8 @@ function App() {
                 backgroundColor: piece.color,
                 transform: `rotate(${piece.rotation}deg)`,
                 opacity: 0.8,
-                zIndex: 1000
+                zIndex: 1000,
+                borderRadius: '4px'
               }}
             />
           ))}
@@ -309,7 +316,7 @@ function App() {
         {/* Perfect text */}
         {showPerfect && (
           <div className="perfect-text">
-            PERFECT!
+            🔥 SIZZLIN'!
             {perfectStreak > 1 && <span className="streak">x{perfectStreak}</span>}
           </div>
         )}
@@ -317,12 +324,14 @@ function App() {
         {/* Start screen */}
         {gameState === 'start' && (
           <div className="overlay start-overlay">
-            <h1 className="game-title">BLOCK<br/>STACKER</h1>
-            <p className="tap-text">TAP TO START</p>
+            <div className="logo-burger">🍔</div>
+            <h1 className="game-title">PATTY<br/>STACKER</h1>
+            <p className="subtitle">by Patty Shack</p>
+            <p className="tap-text">TAP TO GRILL</p>
             <div className="instructions">
-              <p>Stack the blocks!</p>
-              <p>Tap to drop each block</p>
-              <p>Perfect alignment = bonus points!</p>
+              <p>Stack the patties!</p>
+              <p>Tap to drop each patty</p>
+              <p>Perfect stack = bonus points!</p>
             </div>
           </div>
         )}
@@ -330,15 +339,15 @@ function App() {
         {/* Game over screen */}
         {gameState === 'gameOver' && (
           <div className="overlay gameover-overlay">
-            <h2 className="gameover-title">GAME OVER</h2>
+            <h2 className="gameover-title">ORDER UP!</h2>
             <div className="final-score">
-              <span>SCORE</span>
+              <span>PATTIES STACKED</span>
               <span className="final-score-value">{score}</span>
             </div>
             {score >= highScore && score > 0 && (
               <div className="new-record">🏆 NEW RECORD!</div>
             )}
-            <p className="tap-text">TAP TO RETRY</p>
+            <p className="tap-text">TAP TO PLAY AGAIN</p>
           </div>
         )}
       </div>
