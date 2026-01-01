@@ -2,128 +2,148 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 const GAME_WIDTH = 300;
-const GAME_HEIGHT = 480;
+const GAME_HEIGHT = 520;
 const INITIAL_BLOCK_WIDTH = 100;
-const BLOCK_HEIGHT = 18;
+const BLOCK_HEIGHT = 22;
+const SPEED_INCREMENT = 0.25;
+const INITIAL_SPEED = 2.5;
 
-const DIFFICULTIES = {
-  easy: { speed: 2, increment: 0.15, maxSpeed: 6 },
-  medium: { speed: 3, increment: 0.25, maxSpeed: 10 },
-  hard: { speed: 4, increment: 0.35, maxSpeed: 14 }
-};
+// Topping types for variety
+const TOPPING_TYPES = [
+  { type: 'patty', height: 22, colors: ['#8B4513', '#6B3E26', '#7B3F00', '#5C4033', '#804000'] },
+  { type: 'cheese', height: 8, colors: ['#FFD700', '#FFA500', '#FFCC00'] },
+  { type: 'lettuce', height: 10, colors: ['#88B04B', '#7CB342', '#9CCC65'] },
+  { type: 'tomato', height: 12, colors: ['#E53935', '#EF5350', '#C62828'] },
+  { type: 'onion', height: 8, colors: ['#E8D5E0', '#F3E5F5', '#FCE4EC'] },
+];
 
 function App() {
-  const [gameState, setGameState] = useState('menu');
-  const [difficulty, setDifficulty] = useState('medium');
+  const [gameState, setGameState] = useState('start');
   const [blocks, setBlocks] = useState([]);
   const [currentBlock, setCurrentBlock] = useState(null);
   const [fallingPieces, setFallingPieces] = useState([]);
+  const [particles, setParticles] = useState([]);
   const [score, setScore] = useState(0);
+  const [displayScore, setDisplayScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('pattyStackerHighScore');
     return saved ? parseInt(saved) : 0;
   });
-  const [combo, setCombo] = useState(0);
+  const [perfectStreak, setPerfectStreak] = useState(0);
   const [showPerfect, setShowPerfect] = useState(false);
   const [cameraOffset, setCameraOffset] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [pattiesCount, setPattiesCount] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   
   const animationRef = useRef();
-  const speedRef = useRef(DIFFICULTIES.medium.speed);
+  const speedRef = useRef(INITIAL_SPEED);
   const directionRef = useRef(1);
-  const audioContextRef = useRef(null);
+  const toppingIndexRef = useRef(0);
 
-  // Initialize audio context
+  // Animated score counter
   useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
-  }, []);
-
-  // Sound effects using Web Audio API
-  const playSound = useCallback((type) => {
-    if (!soundEnabled || !audioContextRef.current) return;
-    
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    switch(type) {
-      case 'drop':
-        oscillator.frequency.setValueAtTime(150, ctx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.1);
-        break;
-      case 'perfect':
-        oscillator.frequency.setValueAtTime(523, ctx.currentTime);
-        oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
-        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.3);
-        break;
-      case 'gameOver':
-        oscillator.frequency.setValueAtTime(200, ctx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.5);
-        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.5);
-        break;
-      default:
-        break;
+    if (displayScore < score) {
+      const timer = setTimeout(() => {
+        setDisplayScore(prev => Math.min(prev + Math.ceil((score - prev) / 5), score));
+      }, 20);
+      return () => clearTimeout(timer);
     }
-  }, [soundEnabled]);
+  }, [displayScore, score]);
 
-  function getPattyColor(index) {
-    const colors = [
-      '#8B4513', '#6B3E26', '#7B3F00', '#5C4033', '#804000',
-      '#654321', '#8B5A2B', '#6F4E37', '#7B5544', '#5D3A1A',
-    ];
-    return colors[index % colors.length];
-  }
+  // Haptic feedback
+  const triggerHaptic = (style = 'light') => {
+    if (navigator.vibrate) {
+      navigator.vibrate(style === 'heavy' ? 20 : 10);
+    }
+  };
+
+  const getNextTopping = () => {
+    toppingIndexRef.current++;
+    // Every 3-5 blocks, add a non-patty topping
+    if (toppingIndexRef.current > 2 && Math.random() > 0.6) {
+      const toppingType = TOPPING_TYPES[Math.floor(Math.random() * (TOPPING_TYPES.length - 1)) + 1];
+      return {
+        ...toppingType,
+        color: toppingType.colors[Math.floor(Math.random() * toppingType.colors.length)]
+      };
+    }
+    const patty = TOPPING_TYPES[0];
+    return {
+      ...patty,
+      color: patty.colors[Math.floor(Math.random() * patty.colors.length)]
+    };
+  };
+
+  const createParticles = (x, y, color, count = 8) => {
+    const newParticles = [];
+    for (let i = 0; i < count; i++) {
+      newParticles.push({
+        id: Date.now() + i,
+        x: x + Math.random() * 60 - 30,
+        y: y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -Math.random() * 6 - 2,
+        color: color,
+        size: Math.random() * 6 + 3,
+        life: 1
+      });
+    }
+    setParticles(prev => [...prev, ...newParticles]);
+  };
+
+  // Particle animation
+  useEffect(() => {
+    if (particles.length === 0) return;
+    const interval = setInterval(() => {
+      setParticles(prev => 
+        prev.map(p => ({
+          ...p,
+          x: p.x + p.vx,
+          y: p.y + p.vy,
+          vy: p.vy + 0.3,
+          life: p.life - 0.03
+        })).filter(p => p.life > 0)
+      );
+    }, 16);
+    return () => clearInterval(interval);
+  }, [particles.length]);
 
   const startGame = useCallback(() => {
-    const settings = DIFFICULTIES[difficulty];
+    triggerHaptic('heavy');
+    toppingIndexRef.current = 0;
+    const patty = TOPPING_TYPES[0];
     const baseBlock = {
       x: (GAME_WIDTH - INITIAL_BLOCK_WIDTH) / 2,
       y: GAME_HEIGHT - BLOCK_HEIGHT,
       width: INITIAL_BLOCK_WIDTH,
-      color: getPattyColor(0)
+      height: BLOCK_HEIGHT,
+      type: 'patty',
+      color: patty.colors[0]
     };
     
+    const nextTopping = getNextTopping();
     setBlocks([baseBlock]);
     setCurrentBlock({
       x: 0,
-      y: GAME_HEIGHT - BLOCK_HEIGHT * 2,
+      y: GAME_HEIGHT - BLOCK_HEIGHT - nextTopping.height - 5,
       width: INITIAL_BLOCK_WIDTH,
-      color: getPattyColor(1)
+      height: nextTopping.height,
+      type: nextTopping.type,
+      color: nextTopping.color
     });
     setFallingPieces([]);
+    setParticles([]);
     setScore(0);
-    setCombo(0);
+    setDisplayScore(0);
+    setPerfectStreak(0);
     setCameraOffset(0);
-    setPattiesCount(1);
-    speedRef.current = settings.speed;
+    setIsPaused(false);
+    speedRef.current = INITIAL_SPEED;
     directionRef.current = 1;
     setGameState('playing');
-  }, [difficulty]);
+  }, []);
 
   useEffect(() => {
-    if (gameState !== 'playing' || !currentBlock) return;
+    if (gameState !== 'playing' || !currentBlock || isPaused) return;
 
     const animate = () => {
       setCurrentBlock(prev => {
@@ -138,13 +158,13 @@ function App() {
     
     animationRef.current = requestAnimationFrame(animate);
     return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
-  }, [gameState, currentBlock?.y]);
+  }, [gameState, currentBlock?.y, isPaused]);
 
   useEffect(() => {
     if (fallingPieces.length === 0) return;
     const interval = setInterval(() => {
       setFallingPieces(prev => 
-        prev.map(piece => ({ ...piece, y: piece.y + 8, rotation: piece.rotation + piece.rotationSpeed }))
+        prev.map(piece => ({ ...piece, y: piece.y + 10, rotation: piece.rotation + piece.rotationSpeed }))
             .filter(piece => piece.y < GAME_HEIGHT + 100)
       );
     }, 16);
@@ -152,9 +172,11 @@ function App() {
   }, [fallingPieces.length]);
 
   const handleTap = useCallback(() => {
-    if (gameState === 'menu') return;
-    if (gameState === 'gameOver') { setGameState('menu'); return; }
+    if (isPaused) return;
+    if (gameState === 'start' || gameState === 'gameOver') { startGame(); return; }
     if (gameState !== 'playing' || !currentBlock) return;
+    
+    triggerHaptic();
     
     const lastBlock = blocks[blocks.length - 1];
     const overlapLeft = Math.max(currentBlock.x, lastBlock.x);
@@ -162,13 +184,11 @@ function App() {
     const overlapWidth = overlapRight - overlapLeft;
     
     if (overlapWidth <= 0) {
-      playSound('gameOver');
+      triggerHaptic('heavy');
       setFallingPieces(prev => [...prev, { ...currentBlock, rotation: 0, rotationSpeed: (Math.random() - 0.5) * 10 }]);
       if (score > highScore) {
         setHighScore(score);
         localStorage.setItem('pattyStackerHighScore', score.toString());
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
       }
       setGameState('gameOver');
       return;
@@ -177,277 +197,310 @@ function App() {
     const isPerfect = Math.abs(currentBlock.x - lastBlock.x) < 5 && Math.abs(currentBlock.width - lastBlock.width) < 5;
     let newBlockWidth = overlapWidth;
     let newBlockX = overlapLeft;
-    let pointsEarned = 10;
+    
+    // Calculate stack position
+    const totalHeight = blocks.reduce((sum, b) => sum + b.height, 0);
+    const newY = GAME_HEIGHT - totalHeight - currentBlock.height;
     
     if (isPerfect) {
-      playSound('perfect');
       newBlockWidth = lastBlock.width;
       newBlockX = lastBlock.x;
-      setCombo(prev => prev + 1);
+      setPerfectStreak(prev => prev + 1);
       setShowPerfect(true);
       setTimeout(() => setShowPerfect(false), 600);
-      pointsEarned = 20 + (combo * 10); // Combo multiplier
+      const bonus = 20 + perfectStreak * 10;
+      setScore(prev => prev + bonus);
+      createParticles(newBlockX + newBlockWidth / 2, newY, '#FFD700', 12);
+      triggerHaptic('heavy');
     } else {
-      playSound('drop');
-      setCombo(0);
+      setPerfectStreak(0);
+      setScore(prev => prev + 10);
+      createParticles(newBlockX + newBlockWidth / 2, newY, currentBlock.color, 6);
+      
       if (currentBlock.x < lastBlock.x) {
-        setFallingPieces(prev => [...prev, { x: currentBlock.x, y: currentBlock.y, width: lastBlock.x - currentBlock.x, color: currentBlock.color, rotation: 0, rotationSpeed: (Math.random() - 0.5) * 15 }]);
+        setFallingPieces(prev => [...prev, { 
+          x: currentBlock.x, y: currentBlock.y, 
+          width: lastBlock.x - currentBlock.x, height: currentBlock.height,
+          color: currentBlock.color, type: currentBlock.type,
+          rotation: 0, rotationSpeed: (Math.random() - 0.5) * 15 
+        }]);
       }
       if (currentBlock.x + currentBlock.width > lastBlock.x + lastBlock.width) {
-        setFallingPieces(prev => [...prev, { x: lastBlock.x + lastBlock.width, y: currentBlock.y, width: (currentBlock.x + currentBlock.width) - (lastBlock.x + lastBlock.width), color: currentBlock.color, rotation: 0, rotationSpeed: (Math.random() - 0.5) * 15 }]);
+        setFallingPieces(prev => [...prev, { 
+          x: lastBlock.x + lastBlock.width, y: currentBlock.y, 
+          width: (currentBlock.x + currentBlock.width) - (lastBlock.x + lastBlock.width), 
+          height: currentBlock.height,
+          color: currentBlock.color, type: currentBlock.type,
+          rotation: 0, rotationSpeed: (Math.random() - 0.5) * 15 
+        }]);
       }
     }
     
-    setScore(prev => prev + pointsEarned);
-    
-    const newBlock = { x: newBlockX, y: currentBlock.y, width: newBlockWidth, color: currentBlock.color };
+    const newBlock = { 
+      x: newBlockX, y: newY, width: newBlockWidth, 
+      height: currentBlock.height, type: currentBlock.type, color: currentBlock.color 
+    };
     const newBlocks = [...blocks, newBlock];
     setBlocks(newBlocks);
-    setPattiesCount(newBlocks.length);
-    setCameraOffset(Math.max(0, (newBlocks.length - 20) * BLOCK_HEIGHT));
+    
+    const newTotalHeight = newBlocks.reduce((sum, b) => sum + b.height, 0);
+    if (newTotalHeight > GAME_HEIGHT - 150) {
+      setCameraOffset(newTotalHeight - (GAME_HEIGHT - 150));
+    }
     
     if (newBlockWidth < 10) {
-      playSound('gameOver');
       if (score > highScore) {
         setHighScore(score);
         localStorage.setItem('pattyStackerHighScore', score.toString());
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
       }
       setGameState('gameOver');
       return;
     }
     
-    const settings = DIFFICULTIES[difficulty];
-    speedRef.current = Math.min(settings.speed + blocks.length * settings.increment, settings.maxSpeed);
+    speedRef.current = Math.min(INITIAL_SPEED + newBlocks.length * SPEED_INCREMENT, 10);
     
+    const nextTopping = getNextTopping();
+    const nextY = newY - nextTopping.height - 5;
     setCurrentBlock({
       x: directionRef.current === 1 ? 0 : GAME_WIDTH - newBlockWidth,
-      y: currentBlock.y - BLOCK_HEIGHT,
+      y: nextY,
       width: newBlockWidth,
-      color: getPattyColor(newBlocks.length)
+      height: nextTopping.height,
+      type: nextTopping.type,
+      color: nextTopping.color
     });
-  }, [gameState, currentBlock, blocks, score, highScore, combo, difficulty, playSound]);
+  }, [gameState, currentBlock, blocks, score, highScore, perfectStreak, isPaused, startGame]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' || e.code === 'Enter') { 
-        e.preventDefault(); 
-        if (gameState === 'menu') startGame();
-        else handleTap(); 
-      }
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); handleTap(); }
+      if (e.code === 'Escape' && gameState === 'playing') { setIsPaused(p => !p); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleTap, gameState, startGame]);
+  }, [handleTap, gameState]);
 
-  const shareScore = () => {
-    const text = `🍔 I stacked ${pattiesCount} patties and scored ${score} points in Patty Stacker! Can you beat me?`;
-    if (navigator.share) {
-      navigator.share({ title: 'Patty Stacker', text });
-    } else {
-      navigator.clipboard.writeText(text);
-      alert('Score copied to clipboard!');
+  // Render topping based on type
+  const renderTopping = (block, zIndex, isMoving = false) => {
+    const baseStyle = {
+      position: 'absolute',
+      left: block.x,
+      bottom: GAME_HEIGHT - block.y - block.height,
+      width: block.width,
+      height: block.height,
+      zIndex: zIndex,
+      transition: isMoving ? 'none' : 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      transform: isMoving ? 'scale(1.02)' : 'scale(1)'
+    };
+
+    switch (block.type) {
+      case 'cheese':
+        return (
+          <div key={zIndex} style={baseStyle} className="topping cheese">
+            <div className="cheese-melt" style={{ backgroundColor: block.color }}></div>
+          </div>
+        );
+      case 'lettuce':
+        return (
+          <div key={zIndex} style={baseStyle} className="topping lettuce">
+            <div className="lettuce-wave" style={{ backgroundColor: block.color }}></div>
+          </div>
+        );
+      case 'tomato':
+        return (
+          <div key={zIndex} style={baseStyle} className="topping tomato">
+            <div className="tomato-slice" style={{ backgroundColor: block.color }}></div>
+          </div>
+        );
+      case 'onion':
+        return (
+          <div key={zIndex} style={baseStyle} className="topping onion">
+            <div className="onion-rings" style={{ backgroundColor: block.color }}></div>
+          </div>
+        );
+      default: // patty
+        return (
+          <div key={zIndex} style={baseStyle} className={`topping patty ${isMoving ? 'sizzling' : ''}`}>
+            <div className="patty-top" style={{ backgroundColor: adjustColor(block.color, 15) }}>
+              <div className="grill-marks">
+                <div className="grill-mark"></div>
+                <div className="grill-mark"></div>
+                <div className="grill-mark"></div>
+              </div>
+            </div>
+            <div className="patty-side" style={{ backgroundColor: adjustColor(block.color, -20) }}></div>
+          </div>
+        );
     }
   };
 
-  // Patty Component
-  const Patty = ({ block, zIndex, isMoving }) => (
-    <div className={`patty ${isMoving ? 'patty-sizzle' : ''}`}
-      style={{ left: block.x, bottom: GAME_HEIGHT - block.y - BLOCK_HEIGHT, width: block.width, height: BLOCK_HEIGHT, zIndex }}>
-      <div className="patty-top" style={{ backgroundColor: adjustColor(block.color, 20) }}>
-        <div className="grill-marks">
-          <div className="grill-mark"></div>
-          <div className="grill-mark"></div>
-          <div className="grill-mark"></div>
-        </div>
-      </div>
-      <div className="patty-side" style={{ backgroundColor: adjustColor(block.color, -15) }}></div>
-    </div>
-  );
-
-  // Confetti Component
-  const Confetti = () => (
-    <div className="confetti-container">
-      {[...Array(50)].map((_, i) => (
-        <div key={i} className="confetti" style={{
-          left: `${Math.random() * 100}%`,
-          backgroundColor: ['#ffc107', '#ff6b35', '#dc3545', '#28a745', '#007bff'][Math.floor(Math.random() * 5)],
-          animationDelay: `${Math.random() * 2}s`,
-          animationDuration: `${2 + Math.random() * 2}s`
-        }} />
-      ))}
-    </div>
-  );
-
   return (
     <div className="app-container">
-      {/* iOS Status Bar Safe Area */}
-      <div className="safe-area-top"></div>
+      {/* iOS Status Bar Space */}
+      <div className="status-bar-space"></div>
       
       {/* Header */}
-      <header className="ios-header">
-        <div className="header-content">
-          <div className="score-pill">
-            <span className="score-icon">🍔</span>
-            <span className="score-num">{score}</span>
-          </div>
-          {gameState === 'playing' && combo > 0 && (
-            <div className="combo-pill">
-              <span className="combo-fire">🔥</span>
-              <span className="combo-num">x{combo + 1}</span>
-            </div>
-          )}
-          <button className="settings-btn" onClick={(e) => { e.stopPropagation(); setShowSettings(true); }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-            </svg>
-          </button>
+      <div className="header">
+        <div className="score-pill">
+          <span className="score-icon">🍔</span>
+          <span className="score-number">{displayScore}</span>
         </div>
-      </header>
-
-      {/* Game Area */}
-      <main className="game-wrapper" onClick={gameState === 'playing' ? handleTap : undefined}>
-        <div className="game-area">
-          <div className="grill-surface"></div>
-          <div className="game-world" style={{ transform: `translateY(${cameraOffset}px)` }}>
-            {blocks.map((block, index) => (
-              <Patty key={index} block={block} zIndex={index + 1} isMoving={false} />
-            ))}
-            {currentBlock && gameState === 'playing' && (
-              <Patty block={currentBlock} zIndex={blocks.length + 2} isMoving={true} />
-            )}
-            {fallingPieces.map((piece, index) => (
-              <div key={`fall-${index}`} className="falling-patty"
-                style={{ left: piece.x, bottom: GAME_HEIGHT - piece.y - BLOCK_HEIGHT, width: piece.width, height: BLOCK_HEIGHT, backgroundColor: piece.color, transform: `rotate(${piece.rotation}deg)` }} />
-            ))}
-          </div>
-          
-          {/* Perfect Indicator */}
-          {showPerfect && (
-            <div className="perfect-indicator">
-              <span className="perfect-emoji">🔥</span>
-              <span className="perfect-text">PERFECT!</span>
-              {combo > 0 && <span className="perfect-combo">+{20 + combo * 10}</span>}
-            </div>
-          )}
+        <div className="header-title">Patty Stacker</div>
+        <div className="high-score-pill">
+          <span className="score-icon">👑</span>
+          <span className="score-number">{highScore}</span>
         </div>
-        
-        {/* Patty Counter */}
-        {gameState === 'playing' && (
-          <div className="patty-counter">
-            <span>{pattiesCount}</span>
-            <small>patties</small>
-          </div>
-        )}
-      </main>
-
-      {/* Menu Screen */}
-      {gameState === 'menu' && (
-        <div className="ios-modal menu-modal">
-          <div className="modal-content">
-            <div className="menu-logo">🍔</div>
-            <h1 className="menu-title">Patty Stacker</h1>
-            <p className="menu-subtitle">by Patty Shack</p>
-            
-            <div className="difficulty-selector">
-              {['easy', 'medium', 'hard'].map(d => (
-                <button key={d} className={`diff-btn ${difficulty === d ? 'active' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); setDifficulty(d); }}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </button>
-              ))}
-            </div>
-            
-            <button className="play-btn" onClick={startGame}>
-              <span>Start Grilling</span>
-              <span className="btn-icon">→</span>
-            </button>
-            
-            <div className="high-score-display">
-              <span className="trophy">🏆</span>
-              <span>Best: {highScore}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Game Over Bottom Sheet */}
-      {gameState === 'gameOver' && (
-        <div className="ios-bottom-sheet">
-          {showConfetti && <Confetti />}
-          <div className="sheet-handle"></div>
-          <div className="sheet-content">
-            <h2 className="sheet-title">Order Up! 🍔</h2>
-            
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-value">{score}</span>
-                <span className="stat-label">Score</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">{pattiesCount}</span>
-                <span className="stat-label">Patties</span>
-              </div>
-            </div>
-            
-            {score >= highScore && score > 0 && (
-              <div className="new-record-badge">
-                <span>🏆 New Record!</span>
-              </div>
-            )}
-            
-            <div className="sheet-actions">
-              <button className="action-btn primary" onClick={startGame}>
-                Play Again
-              </button>
-              <button className="action-btn secondary" onClick={shareScore}>
-                Share Score
-              </button>
-            </div>
-            
-            <button className="menu-link" onClick={() => setGameState('menu')}>
-              Back to Menu
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="ios-modal settings-modal" onClick={() => setShowSettings(false)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Settings</h3>
-              <button className="close-btn" onClick={() => setShowSettings(false)}>✕</button>
-            </div>
-            <div className="settings-list">
-              <div className="setting-row">
-                <span>Sound Effects</span>
-                <button className={`ios-toggle ${soundEnabled ? 'on' : ''}`}
-                  onClick={() => setSoundEnabled(!soundEnabled)}>
-                  <div className="toggle-knob"></div>
-                </button>
-              </div>
-              <div className="setting-row">
-                <span>High Score</span>
-                <span className="setting-value">{highScore}</span>
-              </div>
-            </div>
-            <button className="reset-btn" onClick={() => {
-              localStorage.removeItem('pattyStackerHighScore');
-              setHighScore(0);
-            }}>Reset High Score</button>
-          </div>
+      </div>
+      
+      {/* Streak indicator */}
+      {perfectStreak > 1 && gameState === 'playing' && (
+        <div className="streak-badge">
+          <span className="streak-flame">🔥</span>
+          <span className="streak-count">{perfectStreak}x Combo</span>
         </div>
       )}
       
-      {/* Tap hint */}
-      {gameState === 'playing' && blocks.length === 1 && (
-        <div className="tap-hint">
-          <span>Tap to drop!</span>
+      {/* Game Area */}
+      <div className="game-area" onClick={handleTap}>
+        <div className="grill-surface"></div>
+        
+        <div className="game-world" style={{ transform: `translateY(${cameraOffset}px)` }}>
+          {/* Stacked toppings */}
+          {blocks.map((block, index) => renderTopping(block, index + 1))}
+          
+          {/* Current moving piece */}
+          {currentBlock && gameState === 'playing' && !isPaused && 
+            renderTopping(currentBlock, blocks.length + 2, true)
+          }
+          
+          {/* Falling pieces */}
+          {fallingPieces.map((piece, index) => (
+            <div
+              key={`fall-${index}`}
+              className="falling-piece"
+              style={{
+                left: piece.x,
+                bottom: GAME_HEIGHT - piece.y - piece.height,
+                width: piece.width,
+                height: piece.height,
+                backgroundColor: piece.color,
+                transform: `rotate(${piece.rotation}deg)`,
+                borderRadius: piece.type === 'patty' ? '6px' : '4px'
+              }}
+            />
+          ))}
+          
+          {/* Particles */}
+          {particles.map(p => (
+            <div
+              key={p.id}
+              className="particle"
+              style={{
+                left: p.x,
+                bottom: GAME_HEIGHT - p.y,
+                width: p.size,
+                height: p.size,
+                backgroundColor: p.color,
+                opacity: p.life
+              }}
+            />
+          ))}
         </div>
+        
+        {/* Perfect popup */}
+        {showPerfect && (
+          <div className="perfect-popup">
+            <span className="perfect-emoji">🔥</span>
+            <span className="perfect-text">Perfect!</span>
+            {perfectStreak > 1 && <span className="perfect-bonus">+{20 + (perfectStreak - 1) * 10}</span>}
+          </div>
+        )}
+        
+        {/* Start Screen */}
+        {gameState === 'start' && (
+          <div className="ios-modal start-modal">
+            <div className="modal-content">
+              <div className="logo-emoji">🍔</div>
+              <h1 className="modal-title">Patty Stacker</h1>
+              <p className="modal-subtitle">by Patty Shack</p>
+              <div className="instructions-card">
+                <div className="instruction-row">
+                  <span className="instruction-icon">👆</span>
+                  <span>Tap to drop each topping</span>
+                </div>
+                <div className="instruction-row">
+                  <span className="instruction-icon">🎯</span>
+                  <span>Stack perfectly for combo bonus</span>
+                </div>
+                <div className="instruction-row">
+                  <span className="instruction-icon">🏆</span>
+                  <span>Build the tallest burger!</span>
+                </div>
+              </div>
+              <button className="ios-button primary" onClick={startGame}>
+                Start Grilling
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Pause Screen */}
+        {isPaused && gameState === 'playing' && (
+          <div className="ios-modal pause-modal">
+            <div className="modal-content">
+              <h2 className="modal-title">Paused</h2>
+              <button className="ios-button primary" onClick={() => setIsPaused(false)}>
+                Resume
+              </button>
+              <button className="ios-button secondary" onClick={() => setGameState('start')}>
+                Quit Game
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Game Over - iOS Bottom Sheet Style */}
+        {gameState === 'gameOver' && (
+          <div className="ios-bottom-sheet">
+            <div className="sheet-handle"></div>
+            <div className="sheet-content">
+              <h2 className="sheet-title">Order Up! 🍔</h2>
+              <div className="score-display-large">
+                <span className="score-label">Final Score</span>
+                <span className="score-big">{score}</span>
+              </div>
+              {score >= highScore && score > 0 && (
+                <div className="new-record-badge">
+                  <span>🏆 New Record!</span>
+                </div>
+              )}
+              <div className="stats-row">
+                <div className="stat-item">
+                  <span className="stat-value">{blocks.length}</span>
+                  <span className="stat-label">Toppings</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-value">{highScore}</span>
+                  <span className="stat-label">Best Score</span>
+                </div>
+              </div>
+              <button className="ios-button primary" onClick={startGame}>
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Pause button */}
+      {gameState === 'playing' && !isPaused && (
+        <button className="pause-button" onClick={(e) => { e.stopPropagation(); setIsPaused(true); }}>
+          <span>⏸</span>
+        </button>
       )}
+      
+      {/* Home indicator space */}
+      <div className="home-indicator-space"></div>
     </div>
   );
 }
