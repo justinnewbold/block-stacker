@@ -1,16 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#0a0a1a"/>
-      <stop offset="100%" style="stop-color:#2a1a4a"/>
-    </linearGradient>
-  </defs>
-  <rect width="100" height="100" rx="15" fill="url(#bg)"/>
-  <rect x="25" y="70" width="50" height="12" rx="2" fill="#FF6B6B"/>
-  <rect x="30" y="55" width="40" height="12" rx="2" fill="#4ECDC4"/>
-  <rect x="35" y="40" width="35" height="12" rx="2" fill="#45B7D1"/>
-  <rect x="38" y="25" width="30" height="12" rx="2" fill="#96CEB4"/>
-  <rect x="10" y="15" width="25" height="12" rx="2" fill="#FFEAA7" opacity="0.7">
-    <animate attributeName="x" values="10;65;10" dur="2s" repeatCount="indefinite"/>
-  </rect>
+  <!-- Top bun -->
+  <ellipse cx="50" cy="25" rx="40" ry="20" fill="#d4a574"/>
+  <ellipse cx="50" cy="22" rx="38" ry="16" fill="#e8c49a"/>
+  <!-- Sesame seeds -->
+  <ellipse cx="35" cy="18" rx="4" ry="2" fill="#fff8e7" transform="rotate(-15 35 18)"/>
+  <ellipse cx="55" cy="15" rx="4" ry="2" fill="#fff8e7" transform="rotate(20 55 15)"/>
+  <ellipse cx="65" cy="22" rx="4" ry="2" fill="#fff8e7" transform="rotate(-10 65 22)"/>
+  <!-- Lettuce -->
+  <path d="M15 45 Q30 38 50 42 Q70 38 85 45 Q80 50 50 48 Q20 50 15 45" fill="#88b04b"/>
+  <!-- Patty 1 -->
+  <rect x="12" y="48" width="76" height="12" rx="3" fill="#6B3E26"/>
+  <rect x="12" y="48" width="76" height="4" rx="2" fill="#8B5A2B"/>
+  <!-- Cheese -->
+  <path d="M10 62 L15 58 L85 58 L90 62 L88 66 L12 66 Z" fill="#ffc107"/>
+  <!-- Patty 2 -->
+  <rect x="12" y="66" width="76" height="12" rx="3" fill="#5C4033"/>
+  <rect x="12" y="66" width="76" height="4" rx="2" fill="#7B5544"/>
+  <!-- Bottom bun -->
+  <ellipse cx="50" cy="85" rx="40" ry="12" fill="#d4a574"/>
+  <ellipse cx="50" cy="82" rx="40" ry="10" fill="#c49a6c"/>
 </svg>
