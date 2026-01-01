@@ -131,10 +131,39 @@ body {
   transition: transform 0.3s ease-out;
 }
 
+/* Block styling - 3D effect without overlapping shadows */
 .block {
   position: absolute;
-  border-radius: 4px;
-  transition: none;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.block-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 3px 3px 0 0;
+}
+
+.block-front {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0 0 3px 3px;
+}
+
+.block-side {
+  position: absolute;
+  bottom: -4px;
+  left: 4px;
+  right: -4px;
+  height: 4px;
+  border-radius: 0 0 3px 3px;
+  z-index: -1;
 }
 
 .placed-block {
@@ -151,7 +180,6 @@ body {
 }
 
 .current-block {
-  z-index: 5;
   animation: blockGlow 0.5s ease-in-out infinite alternate;
 }
 
@@ -165,19 +193,8 @@ body {
 }
 
 .falling-block {
-  z-index: 10;
   transition: none;
-  animation: fall 0.5s ease-in forwards;
-}
-
-@keyframes fall {
-  0% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(100px) rotate(45deg);
-  }
+  border-radius: 3px;
 }
 
 .perfect-text {
