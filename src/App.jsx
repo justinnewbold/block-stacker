@@ -9,7 +9,7 @@ const SPEED_INCREMENT = 0.3;
 const INITIAL_SPEED = 3;
 
 function App() {
-  const [gameState, setGameState] = useState('start'); // start, playing, gameOver
+  const [gameState, setGameState] = useState('start');
   const [blocks, setBlocks] = useState([]);
   const [currentBlock, setCurrentBlock] = useState(null);
   const [fallingPieces, setFallingPieces] = useState([]);
@@ -26,7 +26,6 @@ function App() {
   const speedRef = useRef(INITIAL_SPEED);
   const directionRef = useRef(1);
 
-  // Initialize game
   const startGame = useCallback(() => {
     const baseBlock = {
       x: (GAME_WIDTH - INITIAL_BLOCK_WIDTH) / 2,
@@ -51,7 +50,6 @@ function App() {
     setGameState('playing');
   }, []);
 
-  // Get block color based on index
   function getBlockColor(index) {
     const colors = [
       '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
@@ -62,7 +60,6 @@ function App() {
     return colors[index % colors.length];
   }
 
-  // Game loop
   useEffect(() => {
     if (gameState !== 'playing' || !currentBlock) return;
 
@@ -72,7 +69,6 @@ function App() {
         
         let newX = prev.x + speedRef.current * directionRef.current;
         
-        // Bounce off walls
         if (newX <= 0) {
           newX = 0;
           directionRef.current = 1;
@@ -96,7 +92,6 @@ function App() {
     };
   }, [gameState, currentBlock?.y]);
 
-  // Animate falling pieces
   useEffect(() => {
     if (fallingPieces.length === 0) return;
     
@@ -115,7 +110,6 @@ function App() {
     return () => clearInterval(interval);
   }, [fallingPieces.length]);
 
-  // Handle tap/click
   const handleTap = useCallback(() => {
     if (gameState === 'start') {
       startGame();
@@ -131,13 +125,11 @@ function App() {
     
     const lastBlock = blocks[blocks.length - 1];
     
-    // Calculate overlap
     const overlapLeft = Math.max(currentBlock.x, lastBlock.x);
     const overlapRight = Math.min(currentBlock.x + currentBlock.width, lastBlock.x + lastBlock.width);
     const overlapWidth = overlapRight - overlapLeft;
     
     if (overlapWidth <= 0) {
-      // Completely missed - game over
       setFallingPieces(prev => [...prev, {
         ...currentBlock,
         rotation: 0,
@@ -153,7 +145,6 @@ function App() {
       return;
     }
     
-    // Check if perfect placement (within 5px tolerance)
     const isPerfect = Math.abs(currentBlock.x - lastBlock.x) < 5 && 
                       Math.abs(currentBlock.width - lastBlock.width) < 5;
     
@@ -161,7 +152,6 @@ function App() {
     let newBlockX = overlapLeft;
     
     if (isPerfect) {
-      // Perfect placement - keep same width and position
       newBlockWidth = lastBlock.width;
       newBlockX = lastBlock.x;
       setPerfectStreak(prev => prev + 1);
@@ -172,9 +162,7 @@ function App() {
       setPerfectStreak(0);
       setScore(prev => prev + 10);
       
-      // Create falling piece for the overhang
       if (currentBlock.x < lastBlock.x) {
-        // Overhang on left
         setFallingPieces(prev => [...prev, {
           x: currentBlock.x,
           y: currentBlock.y,
@@ -185,7 +173,6 @@ function App() {
         }]);
       }
       if (currentBlock.x + currentBlock.width > lastBlock.x + lastBlock.width) {
-        // Overhang on right
         setFallingPieces(prev => [...prev, {
           x: lastBlock.x + lastBlock.width,
           y: currentBlock.y,
@@ -197,7 +184,6 @@ function App() {
       }
     }
     
-    // Add the successfully placed block
     const newBlock = {
       x: newBlockX,
       y: currentBlock.y,
@@ -208,11 +194,9 @@ function App() {
     const newBlocks = [...blocks, newBlock];
     setBlocks(newBlocks);
     
-    // Move camera up
     const newCameraOffset = Math.max(0, (newBlocks.length - 15) * BLOCK_HEIGHT);
     setCameraOffset(newCameraOffset);
     
-    // Check if block is too small
     if (newBlockWidth < 10) {
       if (score > highScore) {
         setHighScore(score);
@@ -222,10 +206,8 @@ function App() {
       return;
     }
     
-    // Speed up
     speedRef.current = Math.min(INITIAL_SPEED + blocks.length * SPEED_INCREMENT, 12);
     
-    // Create next block
     const nextY = currentBlock.y - BLOCK_HEIGHT;
     setCurrentBlock({
       x: directionRef.current === 1 ? 0 : GAME_WIDTH - newBlockWidth,
@@ -236,7 +218,6 @@ function App() {
     
   }, [gameState, currentBlock, blocks, score, highScore, perfectStreak, startGame]);
 
-  // Keyboard and touch handlers
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' || e.code === 'Enter') {
@@ -267,7 +248,7 @@ function App() {
           className="game-world"
           style={{ transform: `translateY(${cameraOffset}px)` }}
         >
-          {/* Placed blocks */}
+          {/* Placed blocks - rendered with z-index based on position (higher blocks on top) */}
           {blocks.map((block, index) => (
             <div
               key={index}
@@ -278,9 +259,13 @@ function App() {
                 width: block.width,
                 height: BLOCK_HEIGHT,
                 backgroundColor: block.color,
-                boxShadow: `0 ${BLOCK_HEIGHT/2}px 0 ${adjustColor(block.color, -30)}`
+                zIndex: index + 1
               }}
-            />
+            >
+              <div className="block-top" style={{ backgroundColor: adjustColor(block.color, 20) }} />
+              <div className="block-front" style={{ backgroundColor: block.color }} />
+              <div className="block-side" style={{ backgroundColor: adjustColor(block.color, -30) }} />
+            </div>
           ))}
           
           {/* Current moving block */}
@@ -293,9 +278,13 @@ function App() {
                 width: currentBlock.width,
                 height: BLOCK_HEIGHT,
                 backgroundColor: currentBlock.color,
-                boxShadow: `0 ${BLOCK_HEIGHT/2}px 0 ${adjustColor(currentBlock.color, -30)}`
+                zIndex: blocks.length + 2
               }}
-            />
+            >
+              <div className="block-top" style={{ backgroundColor: adjustColor(currentBlock.color, 20) }} />
+              <div className="block-front" style={{ backgroundColor: currentBlock.color }} />
+              <div className="block-side" style={{ backgroundColor: adjustColor(currentBlock.color, -30) }} />
+            </div>
           )}
           
           {/* Falling pieces */}
@@ -310,7 +299,8 @@ function App() {
                 height: BLOCK_HEIGHT,
                 backgroundColor: piece.color,
                 transform: `rotate(${piece.rotation}deg)`,
-                opacity: 0.8
+                opacity: 0.8,
+                zIndex: 1000
               }}
             />
           ))}
@@ -360,7 +350,6 @@ function App() {
   );
 }
 
-// Helper function to darken/lighten colors
 function adjustColor(color, amount) {
   const hex = color.replace('#', '');
   const num = parseInt(hex, 16);
